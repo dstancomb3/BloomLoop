@@ -37,12 +37,14 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 .rail .vertical-setting{display:flex;flex-direction:column;gap:3px;font-size:10px;text-align:center;width:48px;color:#ece7ff}.rail .vertical-setting strong{font-size:13px;color:#ffdf9e}.rail .vertical-setting input{width:46px;flex:none;accent-color:#bd9efa}
 .toolbar{left:5px;right:5px;bottom:calc(env(safe-area-inset-bottom) + 5px);padding:4px 6px;max-width:900px;border-radius:14px}.dock{gap:4px;min-height:40px;justify-content:space-between}.dock>button{padding:6px;min-width:34px;min-height:38px;font-size:15px}.dock #palette{gap:clamp(3px,.9vw,8px)}.dock .dot{width:clamp(18px,4vw,25px);height:clamp(18px,4vw,25px);min-width:18px;min-height:18px}.dock output{font-size:11px;min-width:34px;text-align:center}
 @media(max-width:390px){.rail button{width:39px;min-height:39px;font-size:19px}.rail .vertical-setting,.rail .vertical-setting input{width:39px}.dock>button{min-width:29px;padding:5px 3px;font-size:13px}.dock{gap:2px}.dock .dot{min-width:17px;width:17px;height:17px}.dock output{min-width:30px;font-size:10px}}
+
+.rail .step-control{display:flex;flex-direction:column;align-items:center;gap:2px;width:48px;padding:4px 0;border-top:1px solid #ffffff24}.step-control span{font-size:10px;color:#e9e4f6}.rail .step-control button{width:42px;min-height:32px;font-size:20px;font-weight:600;padding:2px 0}.step-control output{font-size:14px;font-weight:700;color:#ffdf9e;min-height:18px;font-variant-numeric:tabular-nums}@media(max-width:390px){.rail .step-control{width:39px}.rail .step-control button{width:35px;min-height:30px}}
 </style>
 </head>
 <body>
 <canvas id="art" aria-label="Symmetrical drawing area"></canvas>
 <div id="center-guide" aria-hidden="true"><i></i></div>
-<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.3.7</small></div><button id="save" class="primary">Save PNG</button></header>
+<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.3.8</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <aside class="rail rail-left" aria-label="Drawing tools">
  <button data-tool="free" class="chosen" title="Smooth brush">✎<small>Smooth</small></button>
@@ -55,8 +57,8 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
  <button data-style="ink" class="chosen" title="Classic Ink">✧<small>Ink</small></button>
  <button data-style="glow" title="Soft Glow">✦<small>Glow</small></button>
  <button data-style="dream" title="Dream">☁<small>Dream</small></button>
- <label class="vertical-setting" for="symmetry">Slices <strong id="count">12</strong><input id="symmetry" type="range" min="2" max="48" value="12" aria-label="Number of slices"/></label>
- <label class="vertical-setting" for="brush">Size<input id="brush" type="range" min="1" max="18" value="3" aria-label="Brush size"/></label>
+ <div class="step-control" role="group" aria-label="Slice count"><span>Slices</span><button id="slices-up" aria-label="Increase slices">+</button><output id="count" aria-live="off">12</output><button id="slices-down" aria-label="Decrease slices">−</button><input id="symmetry" type="hidden" value="12"/></div>
+ <div class="step-control" role="group" aria-label="Brush size"><span>Size</span><button id="size-up" aria-label="Increase brush size">+</button><output id="size-count" aria-live="off">3</output><button id="size-down" aria-label="Decrease brush size">−</button><input id="brush" type="hidden" value="3"/></div>
  <button id="guides" aria-pressed="true" title="Toggle slice guides">☷<small>Guides</small></button>
 </aside>
 <div class="toolbar" aria-label="Colors and canvas actions">
@@ -117,7 +119,11 @@ canvas.addEventListener('pointerdown',e=>{if(activePointer!==null)return;e.preve
 canvas.addEventListener('pointermove',e=>{if(e.pointerId!==activePointer)return;e.preventDefault();if(lastDrag){panX+=e.clientX-lastDrag.x;panY+=e.clientY-lastDrag.y;lastDrag={x:e.clientX,y:e.clientY};render();return}if(!current)return;const p=point(e),last=current.points[current.points.length-1];if(tool!=='free'){current.points[1]=p;render()}else if(Math.hypot(p.x-last.x,p.y-last.y)>.004){current.points.push(p);render()}});
 function endPointer(e){if(e.pointerId!==activePointer)return;activePointer=null;lastDrag=null;finish()}
 canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);window.addEventListener('blur',()=>{activePointer=null;lastDrag=null;finish()});
-symmetry.addEventListener('input',()=>{count.textContent=symmetry.value;render()});
+function changeStep(input,output,delta,min,max){const value=Math.max(min,Math.min(max,Number(input.value)+delta));input.value=String(value);output.textContent=String(value);if(input===symmetry)render()}
+document.getElementById('slices-up').onclick=()=>changeStep(symmetry,count,1,2,48);
+document.getElementById('slices-down').onclick=()=>changeStep(symmetry,count,-1,2,48);
+document.getElementById('size-up').onclick=()=>changeStep(brush,document.getElementById('size-count'),1,1,18);
+document.getElementById('size-down').onclick=()=>changeStep(brush,document.getElementById('size-count'),-1,1,18);
 document.getElementById('guides').onclick=()=>{showGuides=!showGuides;const b=document.getElementById('guides');b.setAttribute('aria-pressed',String(showGuides));b.innerHTML=showGuides?'☷<small>Guides</small>':'☰<small>Guides</small>';render()};
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' tool')});
 document.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{style=b.dataset.style;document.querySelectorAll('[data-style]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' brush')});
