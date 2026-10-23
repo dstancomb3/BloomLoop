@@ -40,12 +40,16 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 
 .rail .step-control{display:flex;flex-direction:column;align-items:center;gap:2px;width:48px;padding:4px 0;border-top:1px solid #ffffff24}.step-control span{font-size:10px;color:#e9e4f6}.rail .step-control button{width:42px;min-height:32px;font-size:20px;font-weight:600;padding:2px 0}.step-control output{font-size:14px;font-weight:700;color:#ffdf9e;min-height:18px;font-variant-numeric:tabular-nums}@media(max-width:390px){.rail .step-control{width:39px}.rail .step-control button{width:35px;min-height:30px}}
 .rail [aria-pressed="true"]{background:#51416d;border-color:#b995fa}
+
+#color-panel{position:fixed;z-index:12;bottom:calc(env(safe-area-inset-bottom) + 68px);left:50%;transform:translateX(-50%);width:min(330px,calc(100vw - 20px));background:#232943f7;border:1px solid #9a91c055;padding:14px;border-radius:18px;box-shadow:0 12px 30px #0009}#color-panel[hidden]{display:none}.color-heading{display:flex;justify-content:space-between;align-items:center}.color-heading button{min-height:32px;padding:3px 10px}.color-picker{display:flex;align-items:center;gap:12px;margin:10px 0}.color-picker input{width:72px;height:48px;border:0;background:transparent}.palette-choices{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.palette-choices button{min-height:38px;font-size:12px;padding:6px}
+#evolution-controls{position:fixed;z-index:5;top:calc(env(safe-area-inset-top) + 74px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:#1b2033e8;border:1px solid #ffffff24;border-radius:14px;padding:4px}#evolution-controls button{padding:5px 8px;min-height:34px;font-size:12px}#evolution-controls [aria-pressed="true"]{background:#51416d;border-color:#b995fa}
+@media(max-width:390px){#evolution-controls{top:calc(env(safe-area-inset-top) + 66px)}#evolution-controls button{padding:5px 6px}}
 </style>
 </head>
 <body>
 <canvas id="art" aria-label="Symmetrical drawing area"></canvas>
 <div id="center-guide" aria-hidden="true"><i></i></div>
-<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.4.0</small></div><button id="save" class="primary">Save PNG</button></header>
+<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.5.0</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <aside class="rail rail-left" aria-label="Drawing tools">
  <button data-tool="free" class="chosen" title="Smooth brush">✎<small>Smooth</small></button>
@@ -69,7 +73,7 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
  <div class="dock">
   <button id="undo" title="Undo" aria-label="Undo">↶</button>
   <button id="redo" title="Redo" aria-label="Redo">↷</button>
-  <div id="palette" aria-label="Brush colors"></div>
+  <div id="palette" aria-label="Brush colors"></div><button id="colors-open" title="Color wheel and palettes" aria-expanded="false">🎨</button>
   <button id="minus" aria-label="Zoom out">−</button>
   <output id="zoom-label">100%</output>
   <button id="plus" aria-label="Zoom in">+</button>
@@ -77,14 +81,25 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
   <button id="clear">Clear</button>
  </div>
 </div>
+<section id="color-panel" hidden aria-label="Color picker and palettes">
+ <div class="color-heading"><strong>Colors</strong><button id="colors-close" aria-label="Close colors">×</button></div>
+ <div class="color-picker"><input id="custom-color" type="color" value="#77dceb" aria-label="Choose any brush color"/><label for="custom-color">Color wheel</label></div>
+ <div class="palette-choices"><button data-palette="aurora">Aurora</button><button data-palette="sunset">Sunset</button><button data-palette="ocean">Ocean</button><button data-palette="garden">Garden</button><button data-palette="mono">Moonlight</button></div>
+</section>
+<div id="evolution-controls" aria-label="Live Evolution controls">
+ <button id="evolve" aria-pressed="false">▶ Evolve</button>
+ <button id="spin" aria-pressed="true" title="Rotation">↻</button>
+ <button id="breathe" aria-pressed="true" title="Breathing">◉</button>
+ <button id="sparkle" aria-pressed="false" title="Sparkles">✦</button>
+</div>
 <script>
 (()=>{
 'use strict';
 const canvas=document.getElementById('art'),ctx=canvas.getContext('2d');
 const symmetry=document.getElementById('symmetry'),count=document.getElementById('count'),brush=document.getElementById('brush');
-const colors=['#77dceb','#c8a0ff','#fa91bf','#ffd28d','#b4f2bc','#ffffff'];
+const palettes={aurora:['#77dceb','#c8a0ff','#fa91bf','#ffd28d','#b4f2bc','#ffffff'],sunset:['#ff646c','#ff9d5c','#ffd166','#e273b1','#a37cf5','#fff0c5'],ocean:['#1d80af','#47c6d7','#8be5ed','#225b9f','#87b4fb','#d7faff'],garden:['#4fac76','#b6e47b','#ffc98c','#f38bad','#9166c4','#ecf5cf'],mono:['#ffffff','#c8d1e4','#9faec9','#7789ac','#52627f','#e6ecff']};let colors=palettes.aurora.slice();
 let showGuides=true,snapEnabled=false,circleAssist=false,smoothLevel=2;
-let activeColor=colors[0],strokes=[],redo=[],current=null,w=0,h=0,dpr=1,activePointer=null,noticeTimer,style='ink',zoom=1,panX=0,panY=0,panMode=false,lastDrag=null,tool='free',framePending=false,cacheValid=false;
+let activeColor=colors[0],strokes=[],redo=[],current=null,w=0,h=0,dpr=1,activePointer=null,noticeTimer,style='ink',zoom=1,panX=0,panY=0,panMode=false,lastDrag=null,tool='free',framePending=false,cacheValid=false,evolving=false,evolveTime=0,lastEvolve=0,rotateOn=true,breatheOn=true,sparkleOn=false,evolveRAF=0;
 const key='bloomloop-v01';
 const layer=document.createElement('canvas'),layerCtx=layer.getContext('2d');
 function toast(message){const el=document.getElementById('toast');el.textContent=message;el.classList.add('show');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.classList.remove('show'),1800)}
@@ -118,7 +133,9 @@ function paintStroke(c,s,width,height,preview=false){if(!s.points.length)return;
  c.restore()}c.restore()}c.restore()}
 function paintCached(){layerCtx.setTransform(1,0,0,1,0,0);layerCtx.clearRect(0,0,layer.width,layer.height);layerCtx.setTransform(dpr,0,0,dpr,0,0);for(const s of strokes)paintStroke(layerCtx,s,w,h);cacheValid=true}
 function drawGuides(){if(!showGuides)return;const n=Number(symmetry.value);const radius=Math.hypot(w,h)/Math.max(.25,zoom);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.strokeStyle='rgba(200,215,255,.19)';ctx.lineWidth=1/zoom;ctx.setLineDash([5/zoom,8/zoom]);for(let i=0;i<n;i++){const a=i*Math.PI*2/n;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);ctx.stroke()}ctx.restore()}
-function drawFrame(){framePending=false;if(!cacheValid)paintCached();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);ctx.drawImage(layer,0,0,w,h);if(current)paintStroke(ctx,current,w,h,true);ctx.restore();drawGuides()}
+function drawFrame(){framePending=false;if(!cacheValid)paintCached();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);if(evolving){if(rotateOn)ctx.rotate(evolveTime*.08);if(breatheOn){const pulse=1+.035*Math.sin(evolveTime*1.7);ctx.scale(pulse,pulse)}}ctx.translate(-w/2,-h/2);ctx.drawImage(layer,0,0,w,h);if(current)paintStroke(ctx,current,w,h,true);ctx.restore();if(evolving&&sparkleOn)drawSparkles();drawGuides()}
+function drawSparkles(){if(!strokes.length)return;const max=Math.min(25,strokes.length*2);ctx.save();ctx.fillStyle='#fff8cc';for(let i=0;i<max;i++){const stroke=strokes[i%strokes.length];if(!stroke.points.length)continue;const p=stroke.points[(Math.floor(evolveTime*4+i*17))%stroke.points.length];const a=2*Math.PI*((i*7)%stroke.symmetry)/stroke.symmetry;const x=p.x*Math.cos(a)-p.y*Math.sin(a),y=p.x*Math.sin(a)+p.y*Math.cos(a);const scale=Math.min(w,h)*.44*zoom;const size=1+1.3*(1+Math.sin(evolveTime*3+i));ctx.globalAlpha=.35+.45*(.5+.5*Math.sin(evolveTime*3+i));ctx.beginPath();ctx.arc(w/2+panX+x*scale,h/2+panY+y*scale,size,0,Math.PI*2);ctx.fill()}ctx.restore()}
+function evolveFrame(t){if(!evolving)return;if(lastEvolve)evolveTime+=Math.min(.05,(t-lastEvolve)/1000);lastEvolve=t;render();evolveRAF=requestAnimationFrame(evolveFrame)}
 function render(){if(!framePending){framePending=true;requestAnimationFrame(drawFrame)}const guide=document.getElementById('center-guide');guide.style.setProperty('--pan-x',panX+'px');guide.style.setProperty('--pan-y',panY+'px');guide.style.setProperty('--zoom',zoom);document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%'}
 function persist(){try{localStorage.setItem(key,JSON.stringify(strokes))}catch(e){toast('Storage full. Export your artwork.')}}
 function finish(){if(!current)return;if(current.tool==='free'&&current.assist){const fit=nearCircle(current.points);if(fit)current.assistedCircle=fit}const finished=current;strokes.push(finished);current=null;redo=[];if(cacheValid){layerCtx.setTransform(dpr,0,0,dpr,0,0);paintStroke(layerCtx,finished,w,h)}else{cacheValid=false}persist();buttons();render()}
@@ -148,7 +165,17 @@ document.getElementById('undo').onclick=()=>{if(strokes.length){redo.push(stroke
 document.getElementById('redo').onclick=()=>{if(redo.length){strokes.push(redo.pop());cacheValid=false;persist();render();buttons()}};
 document.getElementById('clear').onclick=()=>{if(!strokes.length)return;if(!confirm('Clear your drawing?'))return;strokes=[];redo=[];current=null;cacheValid=false;persist();render();buttons();toast('Canvas cleared')};
 document.getElementById('save').onclick=()=>{const out=document.createElement('canvas');out.width=out.height=2048;const c=out.getContext('2d');c.fillStyle='#0d1020';c.fillRect(0,0,2048,2048);for(const stroke of strokes)paintStroke(c,stroke,2048,2048);if(current)paintStroke(c,current,2048,2048);const a=document.createElement('a');a.href=out.toDataURL('image/png');a.download='bloomloop-'+new Date().toISOString().slice(0,10)+'.png';a.click();toast('Artwork exported')};
-const palette=document.getElementById('palette');colors.forEach(color=>{const b=document.createElement('button');b.className='dot';b.style.background=color;b.type='button';b.setAttribute('aria-label','Select '+color);b.onclick=()=>{activeColor=color;palette.querySelectorAll('button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};palette.appendChild(b)});palette.firstChild.classList.add('selected');
+const palette=document.getElementById('palette');
+function selectColor(color){activeColor=color;document.getElementById('custom-color').value=color;palette.querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.color===color))}
+function showPalette(){palette.innerHTML='';colors.forEach(color=>{const b=document.createElement('button');b.className='dot';b.style.background=color;b.dataset.color=color;b.type='button';b.setAttribute('aria-label','Select '+color);b.onclick=()=>selectColor(color);palette.appendChild(b)});selectColor(colors.includes(activeColor)?activeColor:colors[0])}
+showPalette();
+document.getElementById('custom-color').oninput=e=>{const c=e.target.value;activeColor=c;palette.querySelectorAll('button').forEach(b=>b.classList.remove('selected'))};
+document.getElementById('colors-open').onclick=()=>{const p=document.getElementById('color-panel');p.hidden=!p.hidden;document.getElementById('colors-open').setAttribute('aria-expanded',String(!p.hidden))};
+document.getElementById('colors-close').onclick=()=>{document.getElementById('color-panel').hidden=true;document.getElementById('colors-open').setAttribute('aria-expanded','false')};
+document.querySelectorAll('[data-palette]').forEach(b=>b.onclick=()=>{colors=palettes[b.dataset.palette].slice();activeColor=colors[0];showPalette();toast(b.textContent+' palette')});
+document.getElementById('evolve').onclick=()=>{evolving=!evolving;const b=document.getElementById('evolve');b.setAttribute('aria-pressed',String(evolving));b.textContent=evolving?'❚❚ Pause':'▶ Evolve';if(evolving){lastEvolve=0;evolveRAF=requestAnimationFrame(evolveFrame)}else{cancelAnimationFrame(evolveRAF);render()}};
+for(const [id,key] of [['spin','rotate'],['breathe','breathe'],['sparkle','sparkle']]){document.getElementById(id).onclick=()=>{if(key==='rotate')rotateOn=!rotateOn;if(key==='breathe')breatheOn=!breatheOn;if(key==='sparkle')sparkleOn=!sparkleOn;document.getElementById(id).setAttribute('aria-pressed',String(key==='rotate'?rotateOn:key==='breathe'?breatheOn:sparkleOn));render()}}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&evolving){document.getElementById('evolve').click()}});
 try{const saved=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(saved))strokes=saved.filter(s=>s&&Array.isArray(s.points)&&Number.isInteger(s.symmetry)&&s.symmetry>=2&&s.symmetry<=48&&typeof s.color==='string'&&Number.isFinite(s.brush)).slice(-300)}catch(e){toast('Previous sketch could not be loaded')}
 window.addEventListener('resize',resize);resize();buttons();
 })();
