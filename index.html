@@ -32,7 +32,7 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 
 
 /* Always-visible edge controls. No nested tool panels. */
-.rail{position:fixed!important;z-index:100!important;top:100px!important;bottom:76px!important;transform:none!important;visibility:visible!important;opacity:1!important;display:flex!important;flex-direction:column;justify-content:center;gap:5px;padding:6px;background:#1b2033d9;border:1px solid #ffffff24;border-radius:16px;backdrop-filter:blur(12px);max-height:none;overflow-y:auto;scrollbar-width:none}.rail::-webkit-scrollbar{display:none}.rail-left{left:5px;right:auto}.rail-right{right:5px;left:auto}
+.rail{position:fixed!important;z-index:100!important;top:100px!important;bottom:76px!important;transform:none!important;visibility:visible!important;opacity:1!important;display:flex!important;flex-direction:column;justify-content:flex-start;gap:5px;padding:6px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:#1b2033d9;border:1px solid #ffffff24;border-radius:16px;backdrop-filter:blur(12px);max-height:none;overflow-y:auto;scrollbar-width:none}.rail>button,.rail>.step-control{flex-shrink:0}.rail::-webkit-scrollbar{display:none}.rail-left{left:5px;right:auto}.rail-right{right:5px;left:auto}
 .rail button{width:48px;min-height:43px;padding:5px 2px;font-size:22px;line-height:1;border-radius:10px}.rail button small{font-size:9px;line-height:1.2;color:#e4dff5;margin-top:4px}.rail button.chosen{background:#51416d;border-color:#b995fa}
 .rail .vertical-setting{display:flex;flex-direction:column;gap:3px;font-size:10px;text-align:center;width:48px;color:#ece7ff}.rail .vertical-setting strong{font-size:13px;color:#ffdf9e}.rail .vertical-setting input{width:46px;flex:none;accent-color:#bd9efa}
 .toolbar{left:5px;right:5px;bottom:calc(env(safe-area-inset-bottom) + 5px);padding:4px 6px;max-width:900px;border-radius:14px}.dock{gap:4px;min-height:40px;justify-content:space-between}.dock>button{padding:6px;min-width:34px;min-height:38px;font-size:15px}.dock #palette{gap:clamp(3px,.9vw,8px)}.dock .dot{width:clamp(18px,4vw,25px);height:clamp(18px,4vw,25px);min-width:18px;min-height:18px}.dock output{font-size:11px;min-width:34px;text-align:center}
@@ -50,7 +50,7 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 <body>
 <canvas id="art" aria-label="Symmetrical drawing area"></canvas>
 <div id="center-guide" aria-hidden="true"><i></i></div>
-<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.5.2</small></div><button id="save" class="primary">Save PNG</button></header>
+<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.5.3</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <aside class="rail rail-left" aria-label="Drawing tools">
  <button data-tool="free" class="chosen" title="Smooth brush">✎<small>Smooth</small></button>
