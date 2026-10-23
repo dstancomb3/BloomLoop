@@ -30,6 +30,13 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 #guides[aria-pressed="true"]{border-color:#b995fa;background:#51416d}
 
 @media(max-width:390px){.toolbar{padding:5px;left:5px;right:5px}.dock{gap:4px}.dock>button{padding:7px 6px;font-size:12px;min-width:36px}.dock-label{display:none}.dock #palette{gap:4px}.dock .dot{width:20px;height:20px}.modes button{font-size:11px}}.actions{gap:5px}.actions button{padding:8px 9px;font-size:12px}#palette{gap:7px}}
+
+/* Always-visible edge controls. No nested tool panels. */
+.rail{position:fixed;z-index:3;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:5px;padding:6px;background:#1b2033d9;border:1px solid #ffffff24;border-radius:16px;backdrop-filter:blur(12px);max-height:calc(100dvh - 178px);overflow-y:auto;scrollbar-width:none}.rail::-webkit-scrollbar{display:none}.rail-left{left:5px}.rail-right{right:5px}
+.rail button{width:48px;min-height:43px;padding:5px 2px;font-size:22px;line-height:1;border-radius:10px}.rail button small{font-size:9px;line-height:1.2;color:#e4dff5;margin-top:4px}.rail button.chosen{background:#51416d;border-color:#b995fa}
+.rail .vertical-setting{display:flex;flex-direction:column;gap:3px;font-size:10px;text-align:center;width:48px;color:#ece7ff}.rail .vertical-setting strong{font-size:13px;color:#ffdf9e}.rail .vertical-setting input{width:46px;flex:none;accent-color:#bd9efa}
+.toolbar{left:5px;right:5px;bottom:calc(env(safe-area-inset-bottom) + 5px);padding:4px 6px;max-width:900px;border-radius:14px}.dock{gap:4px;min-height:40px;justify-content:space-between}.dock>button{padding:6px;min-width:34px;min-height:38px;font-size:15px}.dock #palette{gap:clamp(3px,.9vw,8px)}.dock .dot{width:clamp(18px,4vw,25px);height:clamp(18px,4vw,25px);min-width:18px;min-height:18px}.dock output{font-size:11px;min-width:34px;text-align:center}
+@media(max-width:390px){.rail button{width:39px;min-height:39px;font-size:19px}.rail .vertical-setting,.rail .vertical-setting input{width:39px}.dock>button{min-width:29px;padding:5px 3px;font-size:13px}.dock{gap:2px}.dock .dot{min-width:17px;width:17px;height:17px}.dock output{min-width:30px;font-size:10px}}
 </style>
 </head>
 <body>
@@ -37,22 +44,32 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 <div id="center-guide" aria-hidden="true"><i></i></div>
 <header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful.</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
-<div class="toolbar" aria-label="Drawing controls">
- <div class="extra" id="advanced" hidden>
-  <div class="modes" role="group" aria-label="Brush style"><button data-style="ink" class="chosen">Classic Ink</button><button data-style="glow">Soft Glow</button><button data-style="dream">Dream</button></div>
-  <div class="modes" role="group" aria-label="Drawing tool"><button data-tool="free" class="chosen">Smooth</button><button data-tool="line">Line</button><button data-tool="circle">Circle</button><button data-tool="arc">Arc</button></div>
-  <div class="controls"><div class="view"><button id="minus" aria-label="Zoom out">−</button><output id="zoom-label">100%</output><button id="plus" aria-label="Zoom in">+</button><button id="fit">Reset view</button></div></div>
-  <div class="controls"><label for="symmetry">Slices <strong id="count">12</strong></label><input id="symmetry" type="range" min="2" max="48" step="1" value="12" aria-label="Number of slices"/><button id="guides" aria-pressed="true" title="Toggle slice guides">Guides ✓</button></div>
-  <div class="controls"><label for="brush">Brush size</label><input id="brush" type="range" min="1" max="18" value="3"/></div>
- </div>
+<aside class="rail rail-left" aria-label="Drawing tools">
+ <button data-tool="free" class="chosen" title="Smooth brush">✎<small>Smooth</small></button>
+ <button data-tool="line" title="Straight line">╱<small>Line</small></button>
+ <button data-tool="circle" title="Circle">◯<small>Circle</small></button>
+ <button data-tool="arc" title="Arc">⌒<small>Arc</small></button>
+ <button id="pan" aria-pressed="false" title="Pan canvas">✥<small>Pan</small></button>
+</aside>
+<aside class="rail rail-right" aria-label="Brush and canvas settings">
+ <button data-style="ink" class="chosen" title="Classic Ink">✧<small>Ink</small></button>
+ <button data-style="glow" title="Soft Glow">✦<small>Glow</small></button>
+ <button data-style="dream" title="Dream">☁<small>Dream</small></button>
+ <label class="vertical-setting" for="symmetry">Slices <strong id="count">12</strong><input id="symmetry" type="range" min="2" max="48" value="12" aria-label="Number of slices"/></label>
+ <label class="vertical-setting" for="brush">Size<input id="brush" type="range" min="1" max="18" value="3" aria-label="Brush size"/></label>
+ <button id="guides" aria-pressed="true" title="Toggle slice guides">☷<small>Guides</small></button>
+</aside>
+<div class="toolbar" aria-label="Colors and canvas actions">
  <div class="dock">
-  <button id="toggle" aria-expanded="false" aria-controls="advanced">⚙ <span class="dock-label">Tools</span></button>
-  <button id="undo" title="Undo" aria-label="Undo">↶</button><button id="redo" title="Redo" aria-label="Redo">↷</button>
+  <button id="undo" title="Undo" aria-label="Undo">↶</button>
+  <button id="redo" title="Redo" aria-label="Redo">↷</button>
   <div id="palette" aria-label="Brush colors"></div>
-  <button id="pan" aria-pressed="false">Pan</button>
+  <button id="minus" aria-label="Zoom out">−</button>
+  <output id="zoom-label">100%</output>
+  <button id="plus" aria-label="Zoom in">+</button>
+  <button id="fit" title="Reset view">⌂</button>
   <button id="clear">Clear</button>
  </div>
-
 </div>
 <script>
 (()=>{
@@ -101,8 +118,7 @@ canvas.addEventListener('pointermove',e=>{if(e.pointerId!==activePointer)return;
 function endPointer(e){if(e.pointerId!==activePointer)return;activePointer=null;lastDrag=null;finish()}
 canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);window.addEventListener('blur',()=>{activePointer=null;lastDrag=null;finish()});
 symmetry.addEventListener('input',()=>{count.textContent=symmetry.value;render()});
-document.getElementById('guides').onclick=()=>{showGuides=!showGuides;const b=document.getElementById('guides');b.setAttribute('aria-pressed',String(showGuides));b.textContent=showGuides?'Guides ✓':'Guides ○';render()};
-document.getElementById('toggle').onclick=()=>{const panel=document.getElementById('advanced');panel.hidden=!panel.hidden;document.getElementById('toggle').setAttribute('aria-expanded',String(!panel.hidden))};
+document.getElementById('guides').onclick=()=>{showGuides=!showGuides;const b=document.getElementById('guides');b.setAttribute('aria-pressed',String(showGuides));b.innerHTML=showGuides?'☷<small>Guides</small>':'☰<small>Guides</small>';render()};
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' tool')});
 document.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{style=b.dataset.style;document.querySelectorAll('[data-style]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' brush')});
 document.getElementById('pan').onclick=()=>{panMode=!panMode;document.getElementById('pan').classList.toggle('chosen',panMode);document.getElementById('pan').setAttribute('aria-pressed',String(panMode));toast(panMode?'Drag to move artwork':'Drawing mode')};
