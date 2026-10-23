@@ -11,7 +11,8 @@
 #art{position:fixed;inset:0;width:100%;height:100%;touch-action:none;background:radial-gradient(circle at center,#19203d 0%,#0d1020 70%)}
 header{z-index:3;position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 14px) 18px 12px;display:flex;align-items:center;justify-content:space-between;pointer-events:none}
 header>*{pointer-events:auto}h1{font-size:18px;letter-spacing:.035em;margin:0}small{font-size:11px;color:#b0afd0;display:block;margin-top:3px}
-.toolbar{z-index:3;position:fixed;bottom:calc(env(safe-area-inset-bottom) + 14px);left:12px;right:12px;max-width:580px;margin:auto;background:#1b2033ee;border:1px solid #ffffff24;border-radius:22px;padding:13px;box-shadow:0 15px 50px #0008;backdrop-filter:blur(18px)}
+.toolbar{z-index:3;position:fixed;bottom:calc(env(safe-area-inset-bottom) + 8px);left:8px;right:8px;max-width:760px;margin:auto;background:#1b2033eF;border:1px solid #ffffff24;border-radius:18px;padding:6px;box-shadow:0 10px 26px #0007;backdrop-filter:blur(18px)}
+.dock{display:flex;align-items:center;gap:6px;min-height:42px}.dock>button{flex:0 0 auto;min-width:40px}.dock #palette{flex:1;justify-content:center;gap:clamp(4px,1.6vw,12px)}.dock .dot{width:clamp(19px,5vw,25px);height:clamp(19px,5vw,25px);min-width:19px;min-height:19px}.toolbar .extra{padding:12px 6px 4px;border-bottom:1px solid #ffffff24;margin-bottom:7px}.toolbar .extra[hidden]{display:none!important}
 .controls,.actions{display:flex;align-items:center;gap:9px}.controls{margin-bottom:12px}.actions{justify-content:space-between;flex-wrap:wrap}
 button{border:1px solid #ffffff26;background:#2b324b;color:inherit;border-radius:12px;padding:10px 12px;min-height:42px}
 button:active{transform:scale(.96)}button:disabled{opacity:.35}button.primary{background:linear-gradient(120deg,#bd81ed,#6bc8ee);color:#121328;border:0;font-weight:700}
@@ -22,13 +23,13 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 #palette{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
 #toast{position:fixed;left:50%;top:78px;transform:translateX(-50%);background:#313951;border-radius:99px;padding:9px 15px;opacity:0;transition:opacity .2s;pointer-events:none;font-size:13px;white-space:nowrap}
 #toast.show{opacity:1}
-.toolbar.collapsed .extra{display:none}.toolbar.collapsed{width:max-content;left:auto;right:12px;padding:7px;border-radius:18px}.toolbar.collapsed .topbar{margin:0}
+
 .topbar{display:flex;align-items:center;gap:8px;justify-content:space-between;margin-bottom:11px}.topbar span{font-size:12px;color:#bfc6e2}.extra{display:block}.modes{display:flex;gap:6px;margin-bottom:10px}.modes button{flex:1;font-size:12px;padding:8px 5px}.modes button.chosen,#pan.chosen,[data-tool].chosen{border-color:#b995fa;background:#51416d}
 .view{display:flex;gap:6px;align-items:center}.view button{padding:7px 10px;min-height:36px}.view output{font-size:12px;min-width:40px;text-align:center}
 #center-guide{margin-left:var(--pan-x,0px);margin-top:var(--pan-y,0px);scale:var(--zoom,1)}
 #guides[aria-pressed="true"]{border-color:#b995fa;background:#51416d}
 
-@media(max-width:390px){.toolbar{padding:10px}.actions{gap:5px}.actions button{padding:8px 9px;font-size:12px}#palette{gap:7px}}
+@media(max-width:390px){.toolbar{padding:5px;left:5px;right:5px}.dock{gap:4px}.dock>button{padding:7px 6px;font-size:12px;min-width:36px}.dock-label{display:none}.dock #palette{gap:4px}.dock .dot{width:20px;height:20px}.modes button{font-size:11px}}.actions{gap:5px}.actions button{padding:8px 9px;font-size:12px}#palette{gap:7px}}
 </style>
 </head>
 <body>
@@ -37,13 +38,19 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 <header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful.</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <div class="toolbar" aria-label="Drawing controls">
- <div class="topbar"><button id="toggle" aria-expanded="true">Hide controls ▾</button><span>BloomLoop · v0.3.3</span></div>
- <div class="extra">
- <div class="modes" role="group" aria-label="Brush style"><button data-style="ink" class="chosen">Classic Ink</button><button data-style="glow">Soft Glow</button><button data-style="dream">Dream</button></div>
- <div class="modes" role="group" aria-label="Drawing tool"><button data-tool="free" class="chosen">Smooth</button><button data-tool="line">Line</button><button data-tool="circle">Circle</button><button data-tool="arc">Arc</button></div>
- <div class="controls"><div class="view"><button id="minus" aria-label="Zoom out">−</button><output id="zoom-label">100%</output><button id="plus" aria-label="Zoom in">+</button><button id="fit">Reset view</button><button id="pan" aria-pressed="false">Pan</button></div></div>
- <div class="controls"><label for="symmetry">Slices <strong id="count">12</strong></label><input id="symmetry" type="range" min="2" max="48" step="1" value="12" aria-label="Number of slices"/><button id="guides" aria-pressed="true" title="Toggle slice guides">Guides ✓</button><label for="brush">Size</label><input id="brush" type="range" min="1" max="18" value="3" style="max-width:85px"/></div>
- <div class="actions"><div id="palette" aria-label="Brush colors"></div><button id="undo" title="Undo" aria-label="Undo">↶</button><button id="redo" title="Redo" aria-label="Redo">↷</button><button id="clear">Clear</button></div>
+ <div class="dock">
+  <button id="toggle" aria-expanded="false" aria-controls="advanced">⚙ <span class="dock-label">Tools</span></button>
+  <button id="undo" title="Undo" aria-label="Undo">↶</button><button id="redo" title="Redo" aria-label="Redo">↷</button>
+  <div id="palette" aria-label="Brush colors"></div>
+  <button id="pan" aria-pressed="false">Pan</button>
+  <button id="clear">Clear</button>
+ </div>
+ <div class="extra" id="advanced" hidden>
+  <div class="modes" role="group" aria-label="Brush style"><button data-style="ink" class="chosen">Classic Ink</button><button data-style="glow">Soft Glow</button><button data-style="dream">Dream</button></div>
+  <div class="modes" role="group" aria-label="Drawing tool"><button data-tool="free" class="chosen">Smooth</button><button data-tool="line">Line</button><button data-tool="circle">Circle</button><button data-tool="arc">Arc</button></div>
+  <div class="controls"><div class="view"><button id="minus" aria-label="Zoom out">−</button><output id="zoom-label">100%</output><button id="plus" aria-label="Zoom in">+</button><button id="fit">Reset view</button></div></div>
+  <div class="controls"><label for="symmetry">Slices <strong id="count">12</strong></label><input id="symmetry" type="range" min="2" max="48" step="1" value="12" aria-label="Number of slices"/><button id="guides" aria-pressed="true" title="Toggle slice guides">Guides ✓</button></div>
+  <div class="controls"><label for="brush">Brush size</label><input id="brush" type="range" min="1" max="18" value="3"/></div>
  </div>
 </div>
 <script>
@@ -94,7 +101,7 @@ function endPointer(e){if(e.pointerId!==activePointer)return;activePointer=null;
 canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);window.addEventListener('blur',()=>{activePointer=null;lastDrag=null;finish()});
 symmetry.addEventListener('input',()=>{count.textContent=symmetry.value;render()});
 document.getElementById('guides').onclick=()=>{showGuides=!showGuides;const b=document.getElementById('guides');b.setAttribute('aria-pressed',String(showGuides));b.textContent=showGuides?'Guides ✓':'Guides ○';render()};
-document.getElementById('toggle').onclick=()=>{const bar=document.querySelector('.toolbar');bar.classList.toggle('collapsed');const open=!bar.classList.contains('collapsed');document.getElementById('toggle').textContent=open?'Hide controls ▾':'Controls ⚙';document.getElementById('toggle').setAttribute('aria-expanded',String(open))};
+document.getElementById('toggle').onclick=()=>{const panel=document.getElementById('advanced');panel.hidden=!panel.hidden;document.getElementById('toggle').setAttribute('aria-expanded',String(!panel.hidden))};
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' tool')});
 document.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{style=b.dataset.style;document.querySelectorAll('[data-style]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' brush')});
 document.getElementById('pan').onclick=()=>{panMode=!panMode;document.getElementById('pan').classList.toggle('chosen',panMode);document.getElementById('pan').setAttribute('aria-pressed',String(panMode));toast(panMode?'Drag to move artwork':'Drawing mode')};
