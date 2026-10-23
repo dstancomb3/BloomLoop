@@ -37,7 +37,7 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 <header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful.</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <div class="toolbar" aria-label="Drawing controls">
- <div class="topbar"><button id="toggle" aria-expanded="true">Hide controls ▾</button><span>BloomLoop · v0.3.2</span></div>
+ <div class="topbar"><button id="toggle" aria-expanded="true">Hide controls ▾</button><span>BloomLoop · v0.3.3</span></div>
  <div class="extra">
  <div class="modes" role="group" aria-label="Brush style"><button data-style="ink" class="chosen">Classic Ink</button><button data-style="glow">Soft Glow</button><button data-style="dream">Dream</button></div>
  <div class="modes" role="group" aria-label="Drawing tool"><button data-tool="free" class="chosen">Smooth</button><button data-tool="line">Line</button><button data-tool="circle">Circle</button><button data-tool="arc">Arc</button></div>
@@ -73,19 +73,21 @@ function tracePath(c,s,scale){
  for(let j=1;j<pts.length-1;j++){const p=pts[j],q=pts[j+1];c.quadraticCurveTo(p.x*scale,p.y*scale,(p.x+q.x)*scale/2,(p.y+q.y)*scale/2)}
  const last=pts[pts.length-1];c.lineTo(last.x*scale,last.y*scale);
 }
-function paintStroke(c,s,width,height){if(!s.points.length)return;const scale=Math.min(width,height)*.44;c.save();c.translate(width/2,height/2);c.strokeStyle=s.color;c.fillStyle=s.color;c.lineWidth=s.brush*(Math.min(width,height)/390);if(s.style==='dream'){c.globalAlpha=.38;c.lineWidth*=2.3}c.lineCap='round';c.lineJoin='round';
+function paintStroke(c,s,width,height,preview=false){if(!s.points.length)return;const scale=Math.min(width,height)*.44;c.save();c.translate(width/2,height/2);c.strokeStyle=s.color;c.fillStyle=s.color;c.lineWidth=s.brush*(Math.min(width,height)/390);if(s.style==='dream'){c.globalAlpha=.38;c.lineWidth*=2.3}c.lineCap='round';c.lineJoin='round';
  // Several translucent passes avoid expensive shadowBlur for each mirrored path.
  const baseWidth=c.lineWidth,glow=s.style==='glow';
+ if(glow&&!preview){c.shadowColor=s.color;c.shadowBlur=Math.max(6,baseWidth*4);}
  for(let i=0;i<s.symmetry;i++){c.save();c.rotate(2*Math.PI*i/s.symmetry);for(const mirrored of [false,true]){c.save();if(mirrored)c.scale(1,-1);tracePath(c,s,scale);
- if(glow){c.globalAlpha=.09;c.lineWidth=baseWidth*4;c.stroke();c.globalAlpha=.2;c.lineWidth=baseWidth*2.2;c.stroke();c.globalAlpha=1;c.lineWidth=baseWidth;c.stroke()}
+ if(glow&&preview){c.globalAlpha=.12;c.lineWidth=baseWidth*3.5;c.stroke();c.globalAlpha=1;c.lineWidth=baseWidth;c.stroke()}
+ else if(glow){c.globalAlpha=.8;c.lineWidth=baseWidth;c.stroke();c.shadowBlur=0;c.globalAlpha=1;c.stroke();c.shadowBlur=Math.max(6,baseWidth*4)}
  else c.stroke();
  c.restore()}c.restore()}c.restore()}
 function paintCached(){layerCtx.setTransform(1,0,0,1,0,0);layerCtx.clearRect(0,0,layer.width,layer.height);layerCtx.setTransform(dpr,0,0,dpr,0,0);for(const s of strokes)paintStroke(layerCtx,s,w,h);cacheValid=true}
 function drawGuides(){if(!showGuides)return;const n=Number(symmetry.value);const radius=Math.hypot(w,h)/Math.max(.25,zoom);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.strokeStyle='rgba(200,215,255,.19)';ctx.lineWidth=1/zoom;ctx.setLineDash([5/zoom,8/zoom]);for(let i=0;i<n;i++){const a=i*Math.PI*2/n;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);ctx.stroke()}ctx.restore()}
-function drawFrame(){framePending=false;if(!cacheValid)paintCached();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);ctx.drawImage(layer,0,0,w,h);if(current)paintStroke(ctx,current,w,h);ctx.restore();drawGuides()}
+function drawFrame(){framePending=false;if(!cacheValid)paintCached();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);ctx.drawImage(layer,0,0,w,h);if(current)paintStroke(ctx,current,w,h,true);ctx.restore();drawGuides()}
 function render(){if(!framePending){framePending=true;requestAnimationFrame(drawFrame)}const guide=document.getElementById('center-guide');guide.style.setProperty('--pan-x',panX+'px');guide.style.setProperty('--pan-y',panY+'px');guide.style.setProperty('--zoom',zoom);document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%'}
 function persist(){try{localStorage.setItem(key,JSON.stringify(strokes))}catch(e){toast('Storage full. Export your artwork.')}}
-function finish(){if(!current)return;strokes.push(current);current=null;redo=[];cacheValid=false;persist();buttons();render()}
+function finish(){if(!current)return;const finished=current;strokes.push(finished);current=null;redo=[];if(cacheValid){layerCtx.setTransform(dpr,0,0,dpr,0,0);paintStroke(layerCtx,finished,w,h)}else{cacheValid=false}persist();buttons();render()}
 canvas.addEventListener('pointerdown',e=>{if(activePointer!==null)return;e.preventDefault();activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);if(panMode){lastDrag={x:e.clientX,y:e.clientY};return}current={color:activeColor,brush:Number(brush.value),symmetry:Number(symmetry.value),style,tool,points:[point(e)]};render()});
 canvas.addEventListener('pointermove',e=>{if(e.pointerId!==activePointer)return;e.preventDefault();if(lastDrag){panX+=e.clientX-lastDrag.x;panY+=e.clientY-lastDrag.y;lastDrag={x:e.clientX,y:e.clientY};render();return}if(!current)return;const p=point(e),last=current.points[current.points.length-1];if(tool!=='free'){current.points[1]=p;render()}else if(Math.hypot(p.x-last.x,p.y-last.y)>.004){current.points.push(p);render()}});
 function endPointer(e){if(e.pointerId!==activePointer)return;activePointer=null;lastDrag=null;finish()}
