@@ -39,18 +39,21 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 @media(max-width:390px){.rail button{width:39px;min-height:39px;font-size:19px}.rail .vertical-setting,.rail .vertical-setting input{width:39px}.dock>button{min-width:29px;padding:5px 3px;font-size:13px}.dock{gap:2px}.dock .dot{min-width:17px;width:17px;height:17px}.dock output{min-width:30px;font-size:10px}}
 
 .rail .step-control{display:flex;flex-direction:column;align-items:center;gap:2px;width:48px;padding:4px 0;border-top:1px solid #ffffff24}.step-control span{font-size:10px;color:#e9e4f6}.rail .step-control button{width:42px;min-height:32px;font-size:20px;font-weight:600;padding:2px 0}.step-control output{font-size:14px;font-weight:700;color:#ffdf9e;min-height:18px;font-variant-numeric:tabular-nums}@media(max-width:390px){.rail .step-control{width:39px}.rail .step-control button{width:35px;min-height:30px}}
+.rail [aria-pressed="true"]{background:#51416d;border-color:#b995fa}
 </style>
 </head>
 <body>
 <canvas id="art" aria-label="Symmetrical drawing area"></canvas>
 <div id="center-guide" aria-hidden="true"><i></i></div>
-<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.3.8</small></div><button id="save" class="primary">Save PNG</button></header>
+<header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful. · v0.4.0</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <aside class="rail rail-left" aria-label="Drawing tools">
  <button data-tool="free" class="chosen" title="Smooth brush">✎<small>Smooth</small></button>
  <button data-tool="line" title="Straight line">╱<small>Line</small></button>
  <button data-tool="circle" title="Circle">◯<small>Circle</small></button>
  <button data-tool="arc" title="Arc">⌒<small>Arc</small></button>
+ <button id="precision" aria-pressed="false" title="Toggle shape snapping">◇<small>Snap off</small></button>
+ <button id="circle-assist" aria-pressed="false" title="Correct rough circles drawn with Smooth">◎<small>Auto circle</small></button>
  <button id="pan" aria-pressed="false" title="Pan canvas">✥<small>Pan</small></button>
 </aside>
 <aside class="rail rail-right" aria-label="Brush and canvas settings">
@@ -59,6 +62,7 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
  <button data-style="dream" title="Dream">☁<small>Dream</small></button>
  <div class="step-control" role="group" aria-label="Slice count"><span>Slices</span><button id="slices-up" aria-label="Increase slices">+</button><output id="count" aria-live="off">12</output><button id="slices-down" aria-label="Decrease slices">−</button><input id="symmetry" type="hidden" value="12"/></div>
  <div class="step-control" role="group" aria-label="Brush size"><span>Size</span><button id="size-up" aria-label="Increase brush size">+</button><output id="size-count" aria-live="off">3</output><button id="size-down" aria-label="Decrease brush size">−</button><input id="brush" type="hidden" value="3"/></div>
+ <div class="step-control" role="group" aria-label="Curve smoothing"><span>Smooth</span><button id="smooth-up" aria-label="Increase curve smoothing">+</button><output id="smooth-count">2</output><button id="smooth-down" aria-label="Decrease curve smoothing">−</button></div>
  <button id="guides" aria-pressed="true" title="Toggle slice guides">☷<small>Guides</small></button>
 </aside>
 <div class="toolbar" aria-label="Colors and canvas actions">
@@ -79,7 +83,7 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 const canvas=document.getElementById('art'),ctx=canvas.getContext('2d');
 const symmetry=document.getElementById('symmetry'),count=document.getElementById('count'),brush=document.getElementById('brush');
 const colors=['#77dceb','#c8a0ff','#fa91bf','#ffd28d','#b4f2bc','#ffffff'];
-let showGuides=true;
+let showGuides=true,snapEnabled=false,circleAssist=false,smoothLevel=2;
 let activeColor=colors[0],strokes=[],redo=[],current=null,w=0,h=0,dpr=1,activePointer=null,noticeTimer,style='ink',zoom=1,panX=0,panY=0,panMode=false,lastDrag=null,tool='free',framePending=false,cacheValid=false;
 const key='bloomloop-v01';
 const layer=document.createElement('canvas'),layerCtx=layer.getContext('2d');
@@ -88,13 +92,16 @@ function buttons(){document.getElementById('undo').disabled=strokes.length===0;d
 function resize(){const oldW=w,oldH=h;w=window.innerWidth;h=window.innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);layer.width=canvas.width;layer.height=canvas.height;cacheValid=false;render()}
 function point(e){const size=Math.min(w,h)*.44*zoom;return{x:(e.clientX-w/2-panX)/size,y:(e.clientY-h/2-panY)/size}}
 function pathSegment(c,a,b,scale){c.beginPath();c.moveTo(a.x*scale,a.y*scale);c.lineTo(b.x*scale,b.y*scale);c.stroke()}
+function preparedPoints(s){const raw=s.points;if((s.tool||'free')!=='free'||raw.length<3)return raw;const level=Math.max(0,Math.min(5,s.smoothing??0));if(!level)return raw;const radius=Math.min(6,level+1),out=[];for(let i=0;i<raw.length;i++){if(i===0||i===raw.length-1){out.push(raw[i]);continue}let sx=0,sy=0,weight=0;for(let j=Math.max(0,i-radius);j<=Math.min(raw.length-1,i+radius);j++){const wt=radius+1-Math.abs(i-j);sx+=raw[j].x*wt;sy+=raw[j].y*wt;weight+=wt}out.push({x:sx/weight,y:sy/weight})}return out}
+function nearCircle(points){if(points.length<14)return null;const first=points[0],last=points[points.length-1];let length=0,minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;for(let i=0;i<points.length;i++){const p=points[i];minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minY=Math.min(minY,p.y);maxY=Math.max(maxY,p.y);if(i)length+=Math.hypot(p.x-points[i-1].x,p.y-points[i-1].y)}const width=maxX-minX,height=maxY-minY,r=(width+height)/4;if(r<.045||Math.abs(width-height)/Math.max(width,height)>.27||Math.hypot(first.x-last.x,first.y-last.y)>r*.55||length<4.3*r||length>8.4*r)return null;const cx=(minX+maxX)/2,cy=(minY+maxY)/2;let variance=0;for(const p of points){variance+=Math.pow(Math.hypot(p.x-cx,p.y-cy)-r,2)}if(Math.sqrt(variance/points.length)>r*.25)return null;return {x:cx,y:cy,r}}
 function tracePath(c,s,scale){
- const pts=s.points;if(!pts.length)return;const a=pts[0],b=pts[pts.length-1],type=s.tool||'free';
+ const pts=preparedPoints(s);if(!pts.length)return;const a=pts[0],b=pts[pts.length-1],type=s.tool||'free';
  c.beginPath();
+ if(s.assistedCircle){const q=s.assistedCircle;c.arc(q.x*scale,q.y*scale,q.r*scale,0,Math.PI*2);return}
  if(type==='circle'&&pts.length>1){const r=Math.hypot(b.x-a.x,b.y-a.y)*scale;c.arc(a.x*scale,a.y*scale,r,0,Math.PI*2);return}
  if(type==='arc'&&pts.length>1){const dx=b.x-a.x,dy=b.y-a.y,r=Math.hypot(dx,dy)*scale/2;if(r<.01)return;const cx=(a.x+b.x)*scale/2,cy=(a.y+b.y)*scale/2,ang=Math.atan2(dy,dx);c.arc(cx,cy,r,ang+Math.PI,ang,false);return}
  c.moveTo(a.x*scale,a.y*scale);
- if(type==='line'){c.lineTo(b.x*scale,b.y*scale);return}
+ if(type==='line'){let end=b;if(s.snap){const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy),step=Math.PI/12;const angle=Math.round(Math.atan2(dy,dx)/step)*step;end={x:a.x+len*Math.cos(angle),y:a.y+len*Math.sin(angle)}}c.lineTo(end.x*scale,end.y*scale);return}
  if(pts.length===1){c.lineTo(a.x*scale+.001,a.y*scale);return}
  // Quadratic midpoint interpolation reduces touch-input corners.
  for(let j=1;j<pts.length-1;j++){const p=pts[j],q=pts[j+1];c.quadraticCurveTo(p.x*scale,p.y*scale,(p.x+q.x)*scale/2,(p.y+q.y)*scale/2)}
@@ -114,8 +121,8 @@ function drawGuides(){if(!showGuides)return;const n=Number(symmetry.value);const
 function drawFrame(){framePending=false;if(!cacheValid)paintCached();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);ctx.save();ctx.translate(w/2+panX,h/2+panY);ctx.scale(zoom,zoom);ctx.translate(-w/2,-h/2);ctx.drawImage(layer,0,0,w,h);if(current)paintStroke(ctx,current,w,h,true);ctx.restore();drawGuides()}
 function render(){if(!framePending){framePending=true;requestAnimationFrame(drawFrame)}const guide=document.getElementById('center-guide');guide.style.setProperty('--pan-x',panX+'px');guide.style.setProperty('--pan-y',panY+'px');guide.style.setProperty('--zoom',zoom);document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%'}
 function persist(){try{localStorage.setItem(key,JSON.stringify(strokes))}catch(e){toast('Storage full. Export your artwork.')}}
-function finish(){if(!current)return;const finished=current;strokes.push(finished);current=null;redo=[];if(cacheValid){layerCtx.setTransform(dpr,0,0,dpr,0,0);paintStroke(layerCtx,finished,w,h)}else{cacheValid=false}persist();buttons();render()}
-canvas.addEventListener('pointerdown',e=>{if(activePointer!==null)return;e.preventDefault();activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);if(panMode){lastDrag={x:e.clientX,y:e.clientY};return}current={color:activeColor,brush:Number(brush.value),symmetry:Number(symmetry.value),style,tool,points:[point(e)]};render()});
+function finish(){if(!current)return;if(current.tool==='free'&&current.assist){const fit=nearCircle(current.points);if(fit)current.assistedCircle=fit}const finished=current;strokes.push(finished);current=null;redo=[];if(cacheValid){layerCtx.setTransform(dpr,0,0,dpr,0,0);paintStroke(layerCtx,finished,w,h)}else{cacheValid=false}persist();buttons();render()}
+canvas.addEventListener('pointerdown',e=>{if(activePointer!==null)return;e.preventDefault();activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);if(panMode){lastDrag={x:e.clientX,y:e.clientY};return}current={color:activeColor,brush:Number(brush.value),symmetry:Number(symmetry.value),style,tool,smoothing:smoothLevel,snap:snapEnabled,assist:circleAssist,points:[point(e)]};render()});
 canvas.addEventListener('pointermove',e=>{if(e.pointerId!==activePointer)return;e.preventDefault();if(lastDrag){panX+=e.clientX-lastDrag.x;panY+=e.clientY-lastDrag.y;lastDrag={x:e.clientX,y:e.clientY};render();return}if(!current)return;const p=point(e),last=current.points[current.points.length-1];if(tool!=='free'){current.points[1]=p;render()}else if(Math.hypot(p.x-last.x,p.y-last.y)>.004){current.points.push(p);render()}});
 function endPointer(e){if(e.pointerId!==activePointer)return;activePointer=null;lastDrag=null;finish()}
 canvas.addEventListener('pointerup',endPointer);canvas.addEventListener('pointercancel',endPointer);window.addEventListener('blur',()=>{activePointer=null;lastDrag=null;finish()});
@@ -124,6 +131,11 @@ document.getElementById('slices-up').onclick=()=>changeStep(symmetry,count,1,2,4
 document.getElementById('slices-down').onclick=()=>changeStep(symmetry,count,-1,2,48);
 document.getElementById('size-up').onclick=()=>changeStep(brush,document.getElementById('size-count'),1,1,18);
 document.getElementById('size-down').onclick=()=>changeStep(brush,document.getElementById('size-count'),-1,1,18);
+function smoothingStep(delta){smoothLevel=Math.max(0,Math.min(5,smoothLevel+delta));document.getElementById('smooth-count').textContent=String(smoothLevel)}
+document.getElementById('smooth-up').onclick=()=>smoothingStep(1);
+document.getElementById('smooth-down').onclick=()=>smoothingStep(-1);
+document.getElementById('precision').onclick=()=>{snapEnabled=!snapEnabled;const b=document.getElementById('precision');b.setAttribute('aria-pressed',String(snapEnabled));b.innerHTML=snapEnabled?'◇<small>Snap on</small>':'◇<small>Snap off</small>';b.classList.toggle('chosen',snapEnabled)};
+document.getElementById('circle-assist').onclick=()=>{circleAssist=!circleAssist;const b=document.getElementById('circle-assist');b.setAttribute('aria-pressed',String(circleAssist));b.classList.toggle('chosen',circleAssist);toast(circleAssist?'Auto circle on':'Auto circle off')};
 document.getElementById('guides').onclick=()=>{showGuides=!showGuides;const b=document.getElementById('guides');b.setAttribute('aria-pressed',String(showGuides));b.innerHTML=showGuides?'☷<small>Guides</small>':'☰<small>Guides</small>';render()};
 document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' tool')});
 document.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>{style=b.dataset.style;document.querySelectorAll('[data-style]').forEach(x=>x.classList.toggle('chosen',x===b));toast(b.textContent+' brush')});
