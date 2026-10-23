@@ -38,13 +38,6 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
 <header><div><h1>✿ BloomLoop</h1><small>Draw something beautiful.</small></div><button id="save" class="primary">Save PNG</button></header>
 <div id="toast" role="status"></div>
 <div class="toolbar" aria-label="Drawing controls">
- <div class="dock">
-  <button id="toggle" aria-expanded="false" aria-controls="advanced">⚙ <span class="dock-label">Tools</span></button>
-  <button id="undo" title="Undo" aria-label="Undo">↶</button><button id="redo" title="Redo" aria-label="Redo">↷</button>
-  <div id="palette" aria-label="Brush colors"></div>
-  <button id="pan" aria-pressed="false">Pan</button>
-  <button id="clear">Clear</button>
- </div>
  <div class="extra" id="advanced" hidden>
   <div class="modes" role="group" aria-label="Brush style"><button data-style="ink" class="chosen">Classic Ink</button><button data-style="glow">Soft Glow</button><button data-style="dream">Dream</button></div>
   <div class="modes" role="group" aria-label="Drawing tool"><button data-tool="free" class="chosen">Smooth</button><button data-tool="line">Line</button><button data-tool="circle">Circle</button><button data-tool="arc">Arc</button></div>
@@ -52,6 +45,14 @@ label{display:flex;align-items:center;gap:8px;font-size:12px;color:#d8d8ea}input
   <div class="controls"><label for="symmetry">Slices <strong id="count">12</strong></label><input id="symmetry" type="range" min="2" max="48" step="1" value="12" aria-label="Number of slices"/><button id="guides" aria-pressed="true" title="Toggle slice guides">Guides ✓</button></div>
   <div class="controls"><label for="brush">Brush size</label><input id="brush" type="range" min="1" max="18" value="3"/></div>
  </div>
+ <div class="dock">
+  <button id="toggle" aria-expanded="false" aria-controls="advanced">⚙ <span class="dock-label">Tools</span></button>
+  <button id="undo" title="Undo" aria-label="Undo">↶</button><button id="redo" title="Redo" aria-label="Redo">↷</button>
+  <div id="palette" aria-label="Brush colors"></div>
+  <button id="pan" aria-pressed="false">Pan</button>
+  <button id="clear">Clear</button>
+ </div>
+
 </div>
 <script>
 (()=>{
